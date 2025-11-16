@@ -1,0 +1,366 @@
+---
+title: "Online Retail Analysis"
+author: "Prateek Singh"
+date: "2025-04-30"
+output:
+  html_document: default
+  word_document: default
+---
+
+Importing libraries for data cleaning so as to perform an accurate and reliable analysis by removing errors and inaccuracies, tackling missing values and to ensure that the data is consistent. These tools would also help me make the data set of better quality.
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(lubridate)
+```
+
+Importing library for data visualization so I am able to convey my insights, which I have gained from the analyzing the data set, to the people who are unaware with the data set.
+
+```{r}
+library(ggplot2)
+```
+
+Importing the required data set into a variable, so we can work with it.
+
+```{r}
+onlineRetail <- read.csv('Online Retail.csv')
+```
+
+# Online Sales Analysis
+
+## 1 Introduction
+
+This is a transaction data set which contains all the transactions occurring between 01/12/2010 and 09/12/2011 for a UK-based and registered non-store online retail. The company mainly sells unique all-occasion gifts. Many customers of the company are wholesalers. The aim of the analysis is to explore key trends, uncover opportunities for growth, identify strengths and make data driven decision to optimize the online sales. The data sourced used was Online Sales, <https://archive.ics.uci.edu/dataset/352/online+retail> ., by Daqing Chen. The data set has 8 citations. The data set is licensed under the Creative Commons Attribution 4.0 International license.
+
+```{r}
+head(onlineRetail)
+```
+
+```{r}
+summary(onlineRetail)
+```
+
+## 2 Preparation
+
+Changing the datatypes of the `InvoiceNo` and `StockCode` to integer from Character.
+
+```{r}
+onlineRetail <-  mutate(onlineRetail, InvoiceNo = as.integer(InvoiceNo), 
+                        StockCode = as.integer(StockCode))
+```
+
+Making the `InvoiceDate` into date-format from character for accurate sorting and perform complex functions.
+
+```{r}
+onlineRetail$InvoiceDate <- dmy_hm(onlineRetail$InvoiceDate)
+```
+
+Adding more columns to do an in-depth analysis of the data.
+
+```{r}
+onlineRetail$month <- month(onlineRetail$InvoiceDate)
+onlineRetail$date <- as.Date(onlineRetail$InvoiceDate)
+onlineRetail$weekD <- wday(onlineRetail$InvoiceDate, label = TRUE)
+onlineRetail$time <- hour(onlineRetail$InvoiceDate)
+onlineRetail$totalAmount <- (onlineRetail$Quantity * onlineRetail$UnitPrice)
+```
+
+Making another table to store the data after dropping the repeated values, so we can refer back to the original data set if required.
+
+```{r}
+onlineRetailV2 <- onlineRetail %>%  distinct()
+```
+
+Now checking for null values in the columns which are essential for an accurate analysis.
+
+```{r}
+sum(is.na(onlineRetailV2$StockCode))
+sum(is.na(onlineRetailV2$Quantity))
+sum(is.na(onlineRetailV2$UnitPrice))
+sum(is.na(onlineRetailV2$CustomerID))
+sum(is.na(onlineRetailV2$Country))
+
+```
+
+We find that there are several key values that are missing and finally decided to drop all those rows which have these values missing.
+
+```{r}
+onlineRetailV2 <- na.omit(onlineRetailV2)
+```
+
+Since the `UnitPrice` cannot be zero, hence dropping all the rows which have `UnitPrice` as zero and storing it in another variable.
+
+```{r}
+onlineRetailV3 <- subset(onlineRetailV2, (onlineRetailV2$UnitPrice != 0))
+```
+
+## 3 Data Overview
+
+Firstly we will try to find some pattern in the Weekly purchases done by business.
+
+```{r}
+onlineRetailV3 %>% group_by(weekD) %>% summarise(sales = sum(totalAmount))
+```
+
+We see that Thursday has significantly more sales than other days, followed by Tuesday. Curiously enough, we want to know which product had the most sales on Tuesdays.
+
+```{r}
+onlineRetailV3 %>%  group_by(StockCode) %>%  filter(weekD== 'Thu') %>%  
+  summarise(sales = sum(totalAmount)) %>% arrange(desc(sales)) %>% top_n(5)
+```
+
+We see that `StockCode 22423` had the most sales on Thursdays.
+
+Does the quantity sold on the Thursdays go hand in hand with the revenue generated on Thursdays?
+
+```{r}
+onlineRetailV3 %>%  group_by(StockCode) %>%  filter(weekD== 'Thu') %>%  
+  summarise(quantity = sum(Quantity)) %>% arrange(desc(quantity)) %>% top_n(5)
+```
+
+On checking the quantity of products sold on Thursdays, we observe an *irregularity*. The irregularity was caused because the products which are priced lower sold in large quantities, while the products which were priced higher sold lesser, but they generated most of the revenue.
+
+Does the Thursday pattern(high sales on Thursdays) is consistent throughout the year? or there's something hidden ? So lets get the sales on weekdays for all the months and getting only top 3 from each week
+
+```{r}
+onlineRetailV3 %>%  select(c(month, weekD, totalAmount)) %>%  group_by(month, weekD) %>% 
+  summarise(sales = sum(totalAmount)) %>% arrange(desc(sales)) %>%  slice(1:3) %>% 
+  print(n = 36)
+```
+
+We observe that except of the last 3 months, Thursday has the maximum sales for every month.
+
+Did the `StockCode`, which made the maximum sales on Thursday, also made the maximum sale throughout the year ? Lets find out about that.
+
+```{r}
+onlineRetailV3 %>%  group_by(StockCode) %>%  summarise(revenue = sum(totalAmount)) %>%
+  arrange(desc(revenue)) %>%  slice(1:5)
+```
+
+We see that `StockCode 23843` has the maximum sales throughout the year, and also had substantially more sales than the `StockCode 22423`, followed by `StocCode 77916`. But the Items which sold maximum on Thursday was not on top of the other products.
+
+Since the sales go maximum during the last 4 months of the year, and during the last 3 months days other than Thursdays have the maximum amount of sales, that might explain why the Item sold maximum on Thursdays is not on the top revenue generating list.
+
+Lets find out the top 5 customers from each country with their revenue generated by each Customer.
+
+```{r}
+onlineRetailV3 %>% group_by(Country, CustomerID) %>% summarise(revenue = sum(totalAmount)) %>% 
+  arrange(desc(revenue)) %>% slice(1:5) %>%  print(n=132)
+```
+
+From the table above we get an idea of the high value customers from each country. Now we want to look for the Customers who purchased the maximum number of Items from the business so we can get an idea of the frequent low spending customers.
+
+```{r}
+onlineRetailV3 %>%  group_by(CustomerID) %>%  summarise(no = n()) %>%  
+  filter(no > 1) %>%  arrange(desc(no)) %>%  slice(1:5)
+```
+
+Checking for the number of purchases done by the Customers and arranging them into descending order.
+
+```{r}
+onlineRetailV3 %>%  group_by(CustomerID, InvoiceDate) %>%  summarise(cnt = n()) %>% 
+  count() %>%  arrange(desc(n)) %>%  top_n(5)
+```
+
+We see that there are 2 customers that have significantly more number of purchases than the other customers. Now we are going to determine the 5 highest revenue generating dates of the month.
+
+```{r}
+onlineRetailV3 %>%  group_by(month, date) %>% summarise(revenue = sum(totalAmount)) %>% arrange(desc(revenue)) %>% slice(1:5) %>%  print(n= 60)
+```
+
+Now are going back to look at the monthly sales and find some trends in the data.
+
+```{r}
+onlineRetailV3 %>%  group_by(month) %>%  summarise(sales = sum(totalAmount)) %>%  top_n(5)
+```
+
+We see that last 3 months have considerable more sales than the other months. While we see a drop in the sales in the initial months of the year.
+
+From the data, I would speculate that people purchase few items during winters, hence the business purchasing from us reduces its purchases while the reverse is true during the other months but also that Festivals/Special occasions become a bigger factor during the last quarter of the year.
+
+What was the quantity sold?
+
+```{r}
+onlineRetailV3 %>%  group_by(month) %>%  summarise(quantity = sum(Quantity)) %>% top_n(5)
+```
+
+We see a similar trend over here that last 3 months have significantly high sales, while the initial months have the least.
+
+What were the things sold? Lets know more about them.
+
+```{r}
+onlineRetailV3[order(onlineRetailV3$Quantity, decreasing = TRUE),] %>% top_n(5)
+```
+
+Now we would like to see the countries with least amount of unit sold, so we could get an idea of countries where our business is under performing.
+
+```{r}
+onlineRetailV3 %>%  group_by(Country) %>%  
+  summarise(soldUnits = sum(Quantity)) %>%  arrange(soldUnits, FALSE) %>% head(5)
+```
+
+We see that Saudi Arabia has the minimum amount of units sold, followed by Bahrain, Brazil...
+
+```{r}
+onlineRetailV3 %>%  group_by(Country) %>%  
+  summarise(revenueGenerated = sum(totalAmount)) %>%  arrange(revenueGenerated, FALSE)%>% head(5)
+```
+
+We see a similar trend that Saudi Arabia has the minimum revenue generated of all the countries.
+
+Lets go back and take a look at the countries with the maximum revenue generated (except United Kingdom)
+
+```{r}
+onlineRetailV3 %>%  group_by(Country) %>%  
+  summarise(revenueGenerated = sum(Quantity * UnitPrice)) %>% 
+  arrange(desc(revenueGenerated)) %>% filter(Country != "United Kingdom") %>% head(5)
+```
+
+Having seen the highest revenue generated, let us observe the least revenue generating countries.
+
+```{r}
+onlineRetailV3 %>%  group_by(Country) %>%  
+  summarise(revenueGenerated = sum(Quantity * UnitPrice)) %>% 
+  arrange((revenueGenerated)) %>% filter(Country != "United Kingdom")
+```
+
+We observe that `Saudi Arabia` has the minimum amount of sales.
+
+```{r}
+onlineRetailV3 %>%  group_by(Country) %>%  
+  summarise(soldUnits = sum(Quantity)) %>%  arrange(desc(soldUnits)) %>% 
+  filter(Country != "United Kingdom")%>% head(5)
+```
+
+Now we are going to take a look at the top 3 items from each country, according to their quantities sold.
+
+```{r}
+onlineRetailV3 %>%  group_by(Country) %>%  arrange(desc(Quantity)) %>% 
+  top_n(3) %>%  slice(1:3)
+```
+
+## 4 Data Visualization
+
+Firstly, lets visualize the revenue generated by the top 5 countries except the United Kingdom as it has exponentially more sales in United Kingdom and the company/business is also based in United Kingdom.
+
+```{r}
+onlineRetailV3 %>%  group_by(Country) %>%  
+  summarise(revenueGenerated = sum(Quantity * UnitPrice)) %>% 
+  arrange(desc(revenueGenerated)) %>% 
+  filter(Country != "United Kingdom") %>% top_n(5) %>%  
+  ggplot(aes(x = Country, y = revenueGenerated)) + geom_col(position = "dodge") +
+  labs(x = "Countries", y = "Revenue Generated", title = "Top 5 Revenue Generating Countries", 
+       caption = "Countries Excluding United Kingdom")+
+  theme_classic()
+```
+
+We see that Netherlands has the highest amount of Revenue generated followed by EIRE, Germany ... Who are the least Revenue generating countries? Just curious!
+
+```{r}
+onlineRetailV3 %>%  group_by(Country) %>%  
+  summarise(revenueGenerated = sum(Quantity * UnitPrice)) %>% 
+  arrange(revenueGenerated) %>% filter(Country != "United Kingdom") %>% slice(1:5) %>%  
+  ggplot(aes(x = Country, y = revenueGenerated)) + geom_col(position = "dodge") +
+  labs(x = "Countries", y = "Revenue Generated", title = "Bottom 5 Revenue Generating Countries")+
+  theme_classic() + theme(axis.text.x = element_text(angle = -22.5, vjust = 0.1, hjust = 0.2))
+```
+
+We observe(as before) that Saudi Arabia has the minimum amount of Revenue generated.
+
+What were the sales throughout the week?
+
+```{r}
+onlineRetailV3 %>% group_by(weekD) %>% summarise(sales = sum(totalAmount)) %>% 
+  ggplot(aes(x = weekD, y = sales)) + geom_col(position = "dodge") +
+  labs(x= "Weekday", y = "Sales", title = "Sales throughout the Week") + 
+  theme_classic()
+```
+
+We see a trend that the Revenue generated reaches its peak during the mid week days, while seeing a minimum during the weekends.
+
+Does the quantity sold throughout the week follow the same trend as the revenue generated ?
+
+```{r}
+onlineRetailV3 %>% group_by(weekD) %>% summarise(sales = sum(Quantity)) %>% 
+  ggplot(aes(x = weekD, y = sales)) + geom_col(position = "dodge") +
+  labs(x= "Weekday", y = "Quantity", title = "Quantity sold throughout the Week") + 
+  theme_classic()
+```
+
+Here also, we see a similar trend, that the quantity sold on a day sees a maximum on the weekday while having a minimum during the weekends.
+
+What are the top 5 selling items?
+
+```{r}
+onlineRetailV3 %>%  group_by(StockCode) %>%  summarise(total = sum(Quantity)) %>% 
+  arrange(desc(total)) %>%  top_n(5) %>%  
+  ggplot(aes(x = as.factor(StockCode), y = total)) + geom_col(position = "dodge") +
+  labs(x = "Stock Code", y = "Quantities Sold", title = "Top 5 Quantity selling Items") +
+  theme_classic()
+```
+
+Do the top 5 revenue generating countries follow the similar trend to that of top 5 quantity selling countries?
+
+```{r}
+onlineRetailV3 %>%  group_by(StockCode) %>%  summarise(total = sum(totalAmount)) %>% 
+  arrange(desc(total)) %>%  top_n(5) %>%  
+  ggplot(aes(x = as.factor(StockCode), y = total)) + geom_col(position = "dodge") +
+  labs(x = "Stock Code", y = "Revenue Generated", title = "Top 5 Revenue Generating Items") +
+  theme_classic()
+```
+
+We observe that the some Items do follow the trend but some do not. Specifically `StockCode 23843` generates the maximum revenue as well as has the highest quantity sold.
+
+What are the monthly sales , you may ask?
+
+```{r}
+onlineRetailV3 %>%  group_by(month) %>%  summarise(sales = sum(totalAmount)) %>% 
+  ggplot(aes(x= (month), y= sales)) + geom_line() +
+  labs(x= "Months", y= "Sales", title = "Sales throughtout the year") +
+  theme_classic()
+```
+
+The sales during first quarter the sales are down but see a significant increase during the last quarter with small increment during the middle of the year.
+
+What was the revenue generated throughout the week?
+
+```{r}
+onlineRetailV3 %>% group_by(weekD) %>% summarise(sales = sum(totalAmount)) %>% 
+  ggplot(aes(x = weekD, y = sales)) + geom_col(position = "dodge") +
+  labs(x= "Weekday", y = "Sales", title = "Sales throughout the Week") + 
+  theme_classic()
+
+```
+
+We see a similar trend to that of the Quantity sold throughout the week.
+
+How many purchases have been made by the customers throughout the year?
+
+```{r}
+onlineRetailV3 %>%  group_by(CustomerID) %>%  summarise(no = n()) %>%  
+  filter(no > 1) %>%  arrange(desc(no)) %>%  slice(1:5) %>% 
+  ggplot(aes(x= as.factor(CustomerID), y= no)) +geom_col(position = "dodge") + 
+  labs(x= "Customers", y= "No of Purchases", 
+       title = "Top 5 Customers according to the Number of purchases made")+
+  theme_classic()
+```
+
+How frequently do the Customers visit us to purchase Items?
+
+```{r}
+onlineRetailV3 %>%  group_by(CustomerID, InvoiceDate) %>%  summarise(cnt = n()) %>% 
+  count() %>%  arrange(desc(n)) %>%  ungroup() %>%  top_n(5) %>% 
+  ggplot(aes(x= as.factor(CustomerID), y= n)) + geom_col(position = "dodge") +
+  labs(x= "Customer Id", y="No of times visited", 
+       title = "Top 5 Customer according to their their frequency of Purchase") + 
+  theme_classic()
+```
+
+We see some interesting things over here that some customers purchase things in a small batch, while some customers visit don't visit very frequently but purchase a lot of things at once.
+
+## 5 Recommendations
+
+We can shut down our services in some countries which have been under performing from several years. We can open more warehouses in the countries which are generating huge amounts of revenue. We saw that last 3 months of the year saw huge amounts of sale, hence we can increase our stocks, manpower, so we can sell more of the products. We can reduce the number of manpower during the initial months so as to reduce the cost, which might save us exponential amount of money.
+
+Give special attention to the maximum revenue generating customers, give them offers, treat them specially; which might encourage other customers to do the same, while keeping the older customers loyal. We also see that there our customers purchase from us maximum on the Thursdays and it decreases dramatically on as we reach the weekends, hence we can close our stores/warehouses on those days to cut costs and increase man-power and selling capacity on the week days.
