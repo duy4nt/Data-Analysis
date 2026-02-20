@@ -1,0 +1,160 @@
+---
+title: "Healthcare Cost Analysis"
+author: "Prateek Singh"
+date: "2026-02-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The rapid digitization of healthcare system has generated unprecedented volumes of patient data, creating new opportunities for data-driven insights and intelligent clinical decision making. This analysis uses the Healthcare Dataset from Kaggle, which contains 1,338 record of individual insurance beneficiaries along with their associated annual medical charges.
+
+The dataset comprises seven variables spanning demographic, lifestyle and geological attributes. Specifically it included a beneficiary's age, sex, BMI(Body Mass Index), number of dependent children, smoking status, residential region and insurance charges.
+
+The primary objective of this analysis include an Exploratory Data Analysis, conducted to uncover underlying distributions, correlation, and patterns within the dataset and how they effect the cost paid by the insurance; and Predictive Modeling Techniques,aimed at accurately estimating individual insurance charges based other factors.
+
+The sex, smoker and region variables are qualitative values, explaining the lifestyle of the person; while the age, BMI, children and charges variables are the quantitative values. Age column specifies the age of the person; Sex column specifies the gender of the person; Children column specifies the number of dependent children; Smoker columns specifies whether the person smokes or not. Region column specifies the region to which the person belongs to in the country; Charges column specifies the amount paid by the person to the insurance, commonly known as premium in Dollars(\$). BMI column specifies the Body Mass Index of the person.
+
+Body Mass Index(BMI) is a screening tool that uses height and weight to estimate if a person has a healthy body weight. It acts as an indirect indicator of the body fatness and helps access risk for health conditions like heart disease and diabetes. The formula used to calculate the values of BMI variable is `weight(kg)/(height(m))^2`.
+
+Although BMI is a widely used and useful indicator of healthy body weight. It does have its own limitations. BMI is an estimate that cannot take the body composition into account.
+
+BMI Prime is the ratio of a person's measured BMI to the upper limit of BMI that is considered "normal", by the institutions such as the WHO and the CDC. This is the World Health Organization(WHO) recommended body weight based in BMI for adults. It is used for both men and women, age 20 or older:
+
+|                    |           |               |
+|--------------------|-----------|---------------|
+| **Classification** | **BMI**   | **BMI Prime** |
+| Severe Thinness    | \<16      | \<0.64        |
+| Moderate Thinness  | 16 - 17   | 0.64 - 0.68   |
+| Mild Thinness      | 17 - 18.5 | 0.68 - 0.74   |
+| Normal             | 18.5 - 25 | 0.74 - 1      |
+| Overweight         | 25 - 30   | 1 - 1.2       |
+| Obese Class I      | 30 - 35   | 1.2 - 1.4     |
+| Obese Class II     | 35 - 40   | 1.4 - 1.6     |
+| Obese Class III    | \>40      | \>1.6         |
+
+BMI prime allows us to make a quick assessment of how much a person's BMI differs from the upper limit of BMI that is considered normal.
+
+Being overweight increases the risk of a number of serious diseases and health conditions. Below is a list of said risks, according to the Centers for Disease Controls and Prevention(CDC):
+
+-   High blood pressure
+
+-   Higher Level of LDL cholesterol
+
+-   Type II diabetes
+
+-   Coronary heart disease
+
+-   Stroke
+
+-   Gallbladder disease
+
+-   Osteoarthritis, a type of joint disease caused by breakdown of joint cartilage.
+
+-   Sleep apnea and breathing problems and etc.
+
+Being underweight has its own associated risks, listed below:
+
+-   Malnutrition, vitamin deficiency, anemia.
+
+-   Osteoporosis, a disease that causes bone weakness, increasing the risk of breaking bones.
+
+-   A decrease in the immune function.
+
+-   Growth and development issues.
+
+Importing the necessary libraries for the analysis, i.e. `dplyr` for performing complex data transformation and `ggplot2` for the data visualization. The dataset lacks date variable hence date cleaning libraries such as `libridate` is not required.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(visdat)
+```
+
+```{r}
+hccd <- read.csv("insurance.csv")
+```
+
+## Data Overview
+
+```{r}
+colnames(hccd)
+```
+
+```{r}
+head(hccd)
+```
+
+```{r}
+str(hccd)
+```
+
+```{r}
+summary(hccd)
+```
+
+The initial inspection of the dataset describes the distribution of information and provides descriptive statistics of each quantitative variables such as age, BMI, children and charges, but explains the quality of the qualitative variables such as sex, smoker and region. The summary statistics provide the minimum value, each quartile, and the mean, median and the maximum values. The range of the values within each quantitative variables and measure of central tendency is also known. 
+
+The next step is to understand the data quality. Understanding the frequency and location of missing information is crucial for future analysis. The `visdat` package  is used below to visually explain instances of missing information in each of the variables. From this visualization it is evident that all the information is present, but that only partially ensures all information is high enough quality to begin analysis. 
+
+```{r}
+vis_miss(hccd)
+```
+
+In addition to searching for missing information , a through search should be conducted to identify duplicated rows. The code snippet below searched rows to identify any instances of duplicate values. While it is possible that cost paid was same, the dataset contains four quantitative variables describing age, BMI, number of dependent children and charges and three qualitative variables describing sex, lifestyle and region. It is highly doubtful for a person to not only contain an exact copy of those quantitative variables but also unlikely for those variables to create an exact match in cost. In the original dataset, 1 instance of duplicated row must be removed, found by the command `sum(duplicate(hccd))`.
+
+```{r}
+hccd <- hccd %>% distinct()
+```
+
+From the summary earlier in the analysis, it was found that there are charges, BMI and age were always more than 0; which means that our dataset is clean and can state that further analysis will be more accurate. 
+
+```{r}
+hccd %>% group_by(sex) %>% count()
+```
+
+The tibble shows the distribution of the sex in the dataset. Out of the 1337 people, 675 are males and 662 are females.
+
+```{r}
+hccd %>% group_by(smoker) %>% summarise(mean(charges))
+```
+
+The tibble shows the mean of the charge with respect to the lifestyle of the person. It is apparent that a smoker had to pay more charge than the non smoker.
+
+```{r}
+hccd %>% group_by(sex) %>% summarise(mean(charges))
+```
+
+The tibble shows the mean of the charge with respect to the gender of the person. It is apparent that males had to pay more charge than the females, to be specific males had to pay about 11% more than females. The lifestyle of the is the prime suspect here.
+
+```{r}
+hccd %>% filter(sex == 'male') %>% group_by(smoker) %>% count() %>% summarise(percent = n*100/675)
+```
+```{r}
+hccd %>% filter(sex == 'female') %>% group_by(smoker) %>% count() %>% summarise(percent = n*100/662)
+```
+
+The tibble shows that distribution of smokers in both of the genders. There were more men in the dataset than women. 24% men were smokers, while only 17% women were smokers. This explains the 11% more charge paid by men to the insurance.
+
+
+```{r}
+hccd %>% group_by(region) %>% summarise(mean(charges))
+```
+
+The tibble shows the mean of the charge with respect to the region. The people living in the southwest region have to pay the highest charge, while people living in the southwest have to pay the lowest charge.
+
+```{r}
+hccd %>% group_by(children) %>% summarise(mean(charges))
+```
+
+The average charge paid by the person increases as the number of children increases, but this trend is only visible till 3 children, after that it falls sharply, which might be an anomaly and needs some further analysis such as number of people. The only way this anomaly can be explained is by assuming that if the person can have 5 children, then they have lesser chance of getting sick and claiming their insurance. 
+
+## Data Visualization
+
+## Model Building and Evaluation
+
+## Conclusion
