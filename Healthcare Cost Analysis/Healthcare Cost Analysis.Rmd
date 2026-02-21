@@ -123,7 +123,7 @@ The tibble shows the distribution of the sex in the dataset. Out of the 1337 peo
 hccd %>% group_by(smoker) %>% summarise(mean(charges))
 ```
 
-The tibble shows the mean of the charge with respect to the lifestyle of the person. It is apparent that a smoker had to pay more charge than the non smoker.
+The tibble shows the mean of the charge with respect to the lifestyle of the person. It is apparent that a smoker had to pay significantly more charge than the non smoker.
 
 ```{r}
 hccd %>% group_by(sex) %>% summarise(mean(charges))
@@ -169,45 +169,75 @@ The tibble shows the distribution of the people with respect to the number of ch
 hccd %>% ggplot(aes(x = bmi, y = charges, color = age)) + geom_point() + labs(title = "Scatter plot of BMI and Charge with Age of the Person", x = "BMI", y = "Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
 ```
 
+The scatter plot above shows us some interesting patters. The plot shows 2 things, firstly that as BMI increases the charge tends to increase, but is not certainly, secondly as the age increase, the charge paid by the person certainly increase. 
+
 ```{r}
 hccd %>% ggplot(aes(x = charges)) + geom_histogram(aes(fill = after_stat(x)) ,color = "white") + scale_fill_gradient(low = "skyblue", high = "steelblue4") + labs(title = "Distribtion of the charge paid by the People", x = "Charge($)", y = " Count", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
 ```
+
+The histogram above shows the distribution of the charge paid by the customers. Most of the customers of the insurance company are towards the lower end of the charge spectrum. While we see an anomaly around `$37000 - $39000`, but the pattern is clear.
+
+The suspect for the above pattern is the age of the people in the dataset. 
 
 ```{r}
 hccd %>% ggplot(aes(x = age)) + geom_histogram(aes(fill = after_stat(x)), color = "white", bins = 10) + scale_fill_gradient(low = "skyblue", high = "steelblue4") + labs(title = "Distribution of Age in the dataset", x = "Age", y = "Count", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
 ```
 
+The age distribution histogram confirms the assumption that there are abnormally more people in the age range of 18-27. Our dataset is biased towards the younger people and the model made on the dataset will not be very accurate for the older people. 
+
+Younger people tend to pay less charge to the company when compared to old people, hence it might reduce their profit. But this is can also prove to be beneficial as younger people claim their insurance less often. 
+
 ```{r}
-hccd %>% ggplot(aes(x = bmi)) + geom_histogram(aes(fill = after_stat(x)), color = "white", bins = 10) + scale_fill_gradient(low = "skyblue", high = "steelblue4") + labs(title = "Distribution of Age in the dataset", x = "Age", y = "Count", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
+hccd %>% ggplot(aes(x = bmi)) + geom_histogram(aes(fill = after_stat(x)), color = "white", bins = 10) + scale_fill_gradient(low = "skyblue", high = "steelblue4") + labs(title = "Distribution of BMI in the dataset", x = "BMI", y = "Count", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
 ```
+
+The BMI in the dataset is normally distributed, with most of the people falling in the normal to overweight category. 
 
 ```{r}
 hccd %>% ggplot(aes(x = children)) + geom_histogram(aes(fill = after_stat(x)), color = "white") + scale_fill_gradient(low = "skyblue", high = "steelblue4") + labs(title = "Distribution of Age in the dataset", x = "Age", y = "Count", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
 ```
 
+The above distribution shows how many children the customers of the insurance had. About 43% of the total customers had 0 children, while 24% of the total customers had 1 child and similar trend follow.
+
 ```{r}
 hccd %>% ggplot(aes(x = age, y = charges, color = smoker)) + geom_point() + labs(title = "Scatter plot of Age and Charge with Smoking Status", x = "Age", y = "Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle") 
 ```
+
+The above scatter plot shows some interesting patters. The main trend we observe is that as the person's age increases, the charge tend to increase and in general smokers have to pay more than the non smokers. The plot can be divided into 3 groups. The non-smoking category(the bottom group), the smoking category(the top group) and the exceptions(the middle group). The top and bottom groups are self explanatory but the middle group is a collection of exception. There are people who do not smoke but still pay more than a smoker who is older than them. 
+
+The above is the unexplained part of the analysis. 
 
 ```{r}
 hccd %>% group_by(region) %>% summarise(z = mean(charges)) %>% ggplot(aes(x = region, y = z, fill = region)) + geom_col() + theme_light() + labs(title = "Average charge by Region", x = "Region", y = "Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle") 
 ```
 
+The above bar char is a general distribution of the people in the regions. With the southeast housing 12% more customers than the other regions, while other regions sit close to each other with 324 customers.
+
 ```{r}
 hccd %>% group_by(sex) %>% summarise(z = mean(charges)) %>% ggplot(aes(x = sex, y = z, fill = sex)) + geom_col() + labs(title = "Average charge by Sex", x = "Sex", y = "Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
 ```
+
+The above plot suggest that there are males tend to pay more charge than the females, which was also observed in the data overview section. How does sex effect the age and charge distribution?
 
 ```{r}
 hccd %>% ggplot(aes(x = age, y = charges, color = sex)) + geom_point() + labs(title = "Scatter plot of Age and Charge with Smoking Status", x = "Age", y = "Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
 ```
 
+The scatter plot suggests that there is not correlation between price charged and gender of the person. How does charge distribution looks like with respect to the number of dependent children?
+
 ```{r}
-hccd %>% group_by(children) %>% summarise(z = mean(charges)) %>% ggplot(aes(x = children, y = z, fill = children)) + geom_col() + labs(title = "Average Charge by the number of children", x = "Number of Children", y = "Mean Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
+hccd %>% group_by(children) %>% summarise(z = mean(charges)) %>% ggplot(aes(x = children, y = z, fill = children)) + geom_col() + labs(title = "Average charge with respect to the number of children", x = "Number of Children", y = "Mean Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
 ```
+
+The above bar chart shows the charge distribution with respect to the number of children. There is a trend initially and then there is an anomaly. It is logical to charge more price as the number of dependent children increase, and this trend is observed till 3 children. After 3 children, a drop of 9.7% percent was observed, then a drop of 37% was observed for charges of people with 5 children. 
+
+To explain the anomaly, an assumption had to made that people with 4 or 5 or more children tend to be fit and claim their insurance less frequently when compared to 1 - 3 children.  
 
 ```{r}
 hccd %>% select(age, bmi, children, charges) %>% cor() %>% melt() %>% ggplot(aes(x = Var1, y = Var2, fill = value)) + geom_tile(color = "white") + scale_fill_gradient(low = "white", high = "steelblue") + labs(title = "Correlation between Age, BMI, Children and Charges", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle", x = "Variables", y = "Variables") + theme_minimal()
 ```
+
+The heat map shows that there is a high correlation between age and charge, but not so strong relation with other quantities. 
 
 ## Model Building and Evaluation
 
