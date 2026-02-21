@@ -97,9 +97,9 @@ str(hccd)
 summary(hccd)
 ```
 
-The initial inspection of the dataset describes the distribution of information and provides descriptive statistics of each quantitative variables such as age, BMI, children and charges, but explains the quality of the qualitative variables such as sex, smoker and region. The summary statistics provide the minimum value, each quartile, and the mean, median and the maximum values. The range of the values within each quantitative variables and measure of central tendency is also known. 
+The initial inspection of the dataset describes the distribution of information and provides descriptive statistics of each quantitative variables such as age, BMI, children and charges, but explains the quality of the qualitative variables such as sex, smoker and region. The summary statistics provide the minimum value, each quartile, and the mean, median and the maximum values. The range of the values within each quantitative variables and measure of central tendency is also known.
 
-The next step is to understand the data quality. Understanding the frequency and location of missing information is crucial for future analysis. The `visdat` package  is used below to visually explain instances of missing information in each of the variables. From this visualization it is evident that all the information is present, but that only partially ensures all information is high enough quality to begin analysis. 
+The next step is to understand the data quality. Understanding the frequency and location of missing information is crucial for future analysis. The `visdat` package is used below to visually explain instances of missing information in each of the variables. From this visualization it is evident that all the information is present, but that only partially ensures all information is high enough quality to begin analysis.
 
 ```{r}
 vis_miss(hccd)
@@ -111,7 +111,7 @@ In addition to searching for missing information , a through search should be co
 hccd <- hccd %>% distinct()
 ```
 
-From the summary earlier in the analysis, it was found that there are charges, BMI and age were always more than 0; which means that our dataset is clean and can state that further analysis will be more accurate. 
+From the summary earlier in the analysis, it was found that there are charges, BMI and age were always more than 0; which means that our dataset is clean and can state that further analysis will be more accurate.
 
 ```{r}
 hccd %>% group_by(sex) %>% count()
@@ -134,27 +134,93 @@ The tibble shows the mean of the charge with respect to the gender of the person
 ```{r}
 hccd %>% filter(sex == 'male') %>% group_by(smoker) %>% count() %>% summarise(percent = n*100/675)
 ```
+
 ```{r}
 hccd %>% filter(sex == 'female') %>% group_by(smoker) %>% count() %>% summarise(percent = n*100/662)
 ```
 
 The tibble shows that distribution of smokers in both of the genders. There were more men in the dataset than women. 24% men were smokers, while only 17% women were smokers. This explains the 11% more charge paid by men to the insurance.
 
-
 ```{r}
 hccd %>% group_by(region) %>% summarise(mean(charges))
 ```
 
-The tibble shows the mean of the charge with respect to the region. The people living in the southwest region have to pay the highest charge, while people living in the southwest have to pay the lowest charge.
+```{r}
+hccd %>% group_by(region) %>% count()
+```
+
+The tibble shows the mean of the charge with respect to the region. The people living in the southwest region have to pay the highest charge, while people living in the southwest have to pay the lowest charge. The latter tibble shows the distribution of the customers; the southeast region has the highest number of customers, while other region have equal number of customers.
 
 ```{r}
 hccd %>% group_by(children) %>% summarise(mean(charges))
 ```
 
-The average charge paid by the person increases as the number of children increases, but this trend is only visible till 3 children, after that it falls sharply, which might be an anomaly and needs some further analysis such as number of people. The only way this anomaly can be explained is by assuming that if the person can have 5 children, then they have lesser chance of getting sick and claiming their insurance. 
+The average charge paid by the person increases as the number of children increases, but this trend is only visible till 3 children, after that it falls sharply, which might be an anomaly and needs some further analysis such as number of people. The only way this anomaly can be explained is by assuming that if the person can have 5 children, then they have lesser chance of getting sick and claiming their insurance.
+
+```{r}
+hccd %>% group_by(children) %>% count()
+```
+
+The tibble shows the distribution of the people with respect to the number of children.
 
 ## Data Visualization
 
+```{r}
+hccd %>% ggplot(aes(x = bmi, y = charges, color = age)) + geom_point() + labs(title = "Scatter plot of BMI and Charge with Age of the Person", x = "BMI", y = "Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
+```
+
+```{r}
+hccd %>% ggplot(aes(x = charges)) + geom_histogram(aes(fill = after_stat(x)) ,color = "white") + scale_fill_gradient(low = "skyblue", high = "steelblue4") + labs(title = "Distribtion of the charge paid by the People", x = "Charge($)", y = " Count", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
+```
+
+```{r}
+hccd %>% ggplot(aes(x = age)) + geom_histogram(aes(fill = after_stat(x)), color = "white", bins = 10) + scale_fill_gradient(low = "skyblue", high = "steelblue4") + labs(title = "Distribution of Age in the dataset", x = "Age", y = "Count", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
+```
+
+```{r}
+hccd %>% ggplot(aes(x = bmi)) + geom_histogram(aes(fill = after_stat(x)), color = "white", bins = 10) + scale_fill_gradient(low = "skyblue", high = "steelblue4") + labs(title = "Distribution of Age in the dataset", x = "Age", y = "Count", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
+```
+
+```{r}
+hccd %>% ggplot(aes(x = children)) + geom_histogram(aes(fill = after_stat(x)), color = "white") + scale_fill_gradient(low = "skyblue", high = "steelblue4") + labs(title = "Distribution of Age in the dataset", x = "Age", y = "Count", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
+```
+
+```{r}
+hccd %>% ggplot(aes(x = age, y = charges, color = smoker)) + geom_point() + labs(title = "Scatter plot of Age and Charge with Smoking Status", x = "Age", y = "Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle") 
+```
+
+```{r}
+hccd %>% group_by(region) %>% summarise(z = mean(charges)) %>% ggplot(aes(x = region, y = z, fill = region)) + geom_col() + theme_light() + labs(title = "Average charge by Region", x = "Region", y = "Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle") 
+```
+
+```{r}
+hccd %>% group_by(sex) %>% summarise(z = mean(charges)) %>% ggplot(aes(x = sex, y = z, fill = sex)) + geom_col() + labs(title = "Average charge by Sex", x = "Sex", y = "Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
+```
+
+```{r}
+hccd %>% ggplot(aes(x = age, y = charges, color = sex)) + geom_point() + labs(title = "Scatter plot of Age and Charge with Smoking Status", x = "Age", y = "Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
+```
+
+```{r}
+hccd %>% group_by(children) %>% summarise(z = mean(charges)) %>% ggplot(aes(x = children, y = z, fill = children)) + geom_col() + labs(title = "Average Charge by the number of children", x = "Number of Children", y = "Mean Charge($)", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle")
+```
+
+```{r}
+hccd %>% select(age, bmi, children, charges) %>% cor() %>% melt() %>% ggplot(aes(x = Var1, y = Var2, fill = value)) + geom_tile(color = "white") + scale_fill_gradient(low = "white", high = "steelblue") + labs(title = "Correlation between Age, BMI, Children and Charges", subtitle = "Healthcare Cost Dataset", caption = "Data source: Kaggle", x = "Variables", y = "Variables") + theme_minimal()
+```
+
 ## Model Building and Evaluation
 
-## Conclusion
+## Conclusion and Limitations
+
+### Conclusion
+
+### Limitations
+
+-   The background of the dataset is not known.
+
+-   There are only 1337 rows.
+
+-   Dataset is biased towards the younger people.
+
+-   
